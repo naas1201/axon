@@ -482,7 +482,7 @@ export default {
                 concurrent_per_isolate: MAX_CONCURRENT,
                 queue_depth: MAX_QUEUE,
                 rate_limit:
-                  '30 req / 60 s per IP per colo (atomic Workers rate-limit binding) plus a burst bucket of 10 per isolate',
+                  '30 req / 60 s per IP per location (best effort) plus a burst bucket of 10 per isolate; soft when requests spread across isolates',
               },
               sandbox: {
                 filesystem: false,

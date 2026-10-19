@@ -146,8 +146,9 @@ uses the platform's own per-event timing, which is the honest source.
 - Results are serialised inside the VM, capped at 256 KB.
 - API responses: `no-store`, `x-request-id`, `nosniff`, `no-referrer`, `DENY` framing.
 - Request bodies are not logged and not stored. There is no database in the deployment.
-- Rate limiting: an atomic per-colo Workers rate-limit binding (30 per 60 s per IP hash) plus a
-  10-request burst bucket per isolate. Neither is global: no shared counter exists on the free plan.
+- Rate limiting: a per-location Workers rate-limit binding (30 per 60 s per IP hash) plus a
+  10-request burst bucket per isolate. Both are best effort: with no global counter on the free
+  plan, a client spread across isolates can exceed the limit (measured, see FAQ).
 
 Report a vulnerability to <qmpro@outlook.com>, see [SECURITY.md](./SECURITY.md).
 
