@@ -34,7 +34,7 @@ export const ENGINE = 'quickjs 2025-09-13 (bellard)';
 // on this build is roughly 0.25 ms of wasm CPU per check, so 1200 checks cut a
 // runaway loop at about 300 ms, well below the platform kill of 2 s and well
 // above a legitimate lodash parse (tens of checks).
-const MAX_INTERRUPT_CHECKS = 1200;
+export const MAX_INTERRUPT_CHECKS = 1200;
 
 // Kept as a secondary ceiling: it fires in wrangler dev and in Node, where the
 // clock does advance, and it costs nothing in production.

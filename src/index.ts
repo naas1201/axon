@@ -5,7 +5,7 @@
 import { IpLimiter, Semaphore, hashKey } from './limits';
 import { collectImports } from './lexer';
 import { ModuleError, loadModules } from './modules';
-import { ENGINE, SandboxError, execute } from './sandbox';
+import { ENGINE, MAX_INTERRUPT_CHECKS, SandboxError, execute } from './sandbox';
 
 export interface Env {
   ASSETS: Fetcher;
@@ -469,7 +469,7 @@ export default {
               },
               limits: {
                 cpu_ms_free_plan: 10,
-                interrupt_budget_checks: 500,
+                interrupt_budget_checks: MAX_INTERRUPT_CHECKS,
                 default_deadline_ms: DEFAULT_TIMEOUT_MS,
                 max_deadline_ms: MAX_TIMEOUT_MS,
                 min_deadline_ms: MIN_TIMEOUT_MS,
