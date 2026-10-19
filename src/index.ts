@@ -9,6 +9,9 @@ import { ENGINE, SandboxError, execute } from './sandbox';
 
 export interface Env {
   ASSETS: Fetcher;
+  RATE_LIMITER?: {
+    limit(options: { key: string }): Promise<{ success: boolean }>;
+  };
 }
 
 const VERSION = '1.0.0';
@@ -35,6 +38,41 @@ const DEFAULT_MEMORY_MB = 16;
 const MAX_CONCURRENT = 4;
 const MAX_QUEUE = 64;
 const MAX_QUEUE_WAIT_MS = 2000;
+
+// Shared-ish limiter. Isolates are not sticky: Cloudflare may serve two
+// consecutive requests from two different isolates, which makes a purely
+// in-memory bucket almost free to bypass (measured: 60 sequential requests all
+// passed). The edge cache is per colo and survives isolate churn, so it is used
+// as a best-effort fixed-window counter. It is not atomic; a parallel burst can
+// race past it, and that limitation is documented rather than hidden.
+// Fixed salt for the shared counter: the key must be identical across isolates,
+// so it cannot include the per-isolate salt. It is still a hash, never the raw
+// address, and it is never logged.
+const RATE_SALT = 'axon-rate-v1';
+const WINDOW_MS = 60_000;
+const WINDOW_LIMIT = 30;
+
+async function sharedWindow(key: string, ctx: ExecutionContext): Promise<number | null> {
+  try {
+    const store = (caches as unknown as { default?: Cache }).default;
+    if (!store) return null;
+    const now = Date.now();
+    const window = Math.floor(now / WINDOW_MS);
+    const cacheKey = new Request(`https://axon-rate.invalid/${key}/${window}`, { method: 'GET' });
+    const hit = await store.match(cacheKey);
+    const count = hit ? Number(await hit.text()) : 0;
+    if (Number.isFinite(count) && count >= WINDOW_LIMIT) {
+      return Math.max(1, Math.ceil((WINDOW_MS - (now % WINDOW_MS)) / 1000));
+    }
+    const next = new Response(String((Number.isFinite(count) ? count : 0) + 1), {
+      headers: { 'cache-control': 'max-age=120' },
+    });
+    ctx.waitUntil(store.put(cacheKey, next).catch(() => undefined));
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 // Per-isolate (per-colo) best effort. Not a global quota: free plan has no
 // shared state primitive. Documented on the FAQ and in the meta endpoint.
@@ -196,9 +234,42 @@ async function handleExecute(
   request: Request,
   requestId: string,
   ctx: ExecutionContext,
+  env: Env,
 ): Promise<Response> {
   const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
   const bucketKey = hashKey(`${salt()}:${ip}`);
+  const limiterKey = hashKey(`${RATE_SALT}:${ip}`);
+
+  // Atomic per-colo limiter first; the cache window is the fallback if the
+  // binding is missing (for example in a stripped local dev setup).
+  let windowRetry: number | null = null;
+  if (env.RATE_LIMITER) {
+    try {
+      const { success } = await env.RATE_LIMITER.limit({ key: limiterKey });
+      if (!success) windowRetry = 60;
+    } catch {
+      windowRetry = await sharedWindow(limiterKey, ctx);
+    }
+  } else {
+    windowRetry = await sharedWindow(limiterKey, ctx);
+  }
+
+  if (windowRetry !== null) {
+    return jsonResponse(
+      {
+        ok: false,
+        error: {
+          code: 'RATE_LIMITED',
+          message: `rate limit reached, retry in ${windowRetry}s (30 requests per 60s per IP)`,
+        },
+        request_id: requestId,
+      },
+      429,
+      requestId,
+      { 'retry-after': String(windowRetry) },
+    );
+  }
+
   if (!limiter.take(bucketKey)) {
     const retry = limiter.retryAfter(bucketKey);
     const headers = new Headers({ 'retry-after': String(retry) });
@@ -410,7 +481,8 @@ export default {
                 max_module_bytes: 1024 * 1024,
                 concurrent_per_isolate: MAX_CONCURRENT,
                 queue_depth: MAX_QUEUE,
-                rate_limit: '30 req / 60 s, burst 10, per IP per colo',
+                rate_limit:
+                  '30 req / 60 s per IP per colo (atomic Workers rate-limit binding) plus a burst bucket of 10 per isolate',
               },
               sandbox: {
                 filesystem: false,
@@ -429,7 +501,7 @@ export default {
 
         case '/api/v1/execute':
           if (request.method !== 'POST') return methodNotAllowed(requestId, 'POST');
-          return await handleExecute(request, requestId, ctx);
+          return await handleExecute(request, requestId, ctx, env);
 
         default:
           return await staticNotFound(request, env, requestId);

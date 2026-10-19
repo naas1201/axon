@@ -588,6 +588,12 @@ td.num {
   padding: 22px;
   margin: 0 0 1.6em;
   overflow-x: auto;
+  /* Break out of the 72ch prose column so the diagram stays legible. */
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1000px, calc(100vw - 48px));
+  max-width: none;
 }
 
 .diagram svg {

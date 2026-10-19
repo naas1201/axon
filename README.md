@@ -11,7 +11,7 @@ QuickJS WebAssembly sandbox with no filesystem, no network and no state between 
 curl -s https://axon.va-n.com/api/v1/execute \
   -H 'content-type: application/json' \
   -d '{"code":"return 2 + 2"}'
-# {"ok":true,"result":4,"logs":[],"meta":{"wall_ms":1.8,"modules":[],...}}
+# {"ok":true,"result":4,"logs":[],"meta":{"wall_ms":0,"modules":[],...}}
 ```
 
 ## Why
@@ -146,7 +146,8 @@ uses the platform's own per-event timing, which is the honest source.
 - Results are serialised inside the VM, capped at 256 KB.
 - API responses: `no-store`, `x-request-id`, `nosniff`, `no-referrer`, `DENY` framing.
 - Request bodies are not logged and not stored. There is no database in the deployment.
-- Rate limiting is per isolate (per colo) and best effort: the free plan has no global counter.
+- Rate limiting: an atomic per-colo Workers rate-limit binding (30 per 60 s per IP hash) plus a
+  10-request burst bucket per isolate. Neither is global: no shared counter exists on the free plan.
 
 Report a vulnerability to <qmpro@outlook.com>, see [SECURITY.md](./SECURITY.md).
 

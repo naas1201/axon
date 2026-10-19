@@ -12,6 +12,14 @@ type = "CompiledWasm"
 globs = ["**/*.wasm"]
 fallthrough = false
 
+# Workers Rate Limiting API: per-colo, atomic, available on the free plan.
+# 30 requests per 60 seconds per IP hash. The in-isolate bucket in src/limits.ts
+# is a second, cheaper layer for tight bursts.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }
+
 [assets]
 directory = "./public"
 binding = "ASSETS"

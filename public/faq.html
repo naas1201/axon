@@ -144,12 +144,16 @@
 
           <h2>What about rate limits?</h2>
           <p>
-            They are per isolate, which in practice means per Cloudflare colo. There is no global
-            counter on the free plan: Queues and Durable Objects are paid products, and using them
-            would break the "free, no account" promise. The practical consequence is that a
-            distributed client can do more than 30 requests per minute in total, and a single client
-            can be limited sooner if it lands in a busy colo. The service answers <code>429</code>
-            with <code>Retry-After</code> rather than dropping requests.
+            There are two layers. Cloudflare's Workers Rate Limiting API, which is atomic and
+            available on the free plan, allows 30 requests per 60 seconds per IP hash, per colo. A
+            token bucket of 10 per isolate catches tight bursts on a single isolate. Neither is
+            global: a client that lands on several colos or isolates can do more than 30 in a
+            minute. There is no global counter, because Queues and Durable Objects are paid products
+            and using them would break the "free, no account" promise.
+          </p>
+          <p>
+            The service answers <code>429</code> with <code>Retry-After</code> rather than dropping
+            requests. If you need a hard quota, self-host and put your own limiter in front.
           </p>
 
           <h2>Do you keep my code?</h2>

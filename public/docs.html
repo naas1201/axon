@@ -94,7 +94,7 @@
   "result": 4,
   "logs": [],
   "meta": {
-    "wall_ms": 1.8,
+    "wall_ms": 0,
     "modules": [],
     "engine": "quickjs 2025-09-13 (bellard)",
     "timeout_ms": 750,
@@ -107,6 +107,11 @@
             <code>null</code>. Values that cannot be serialised return <code>EXEC_ERROR</code>.
             Results above 256 KB are refused. <code>logs</code> holds up to 50 captured lines from
             <code>console.log</code>, <code>info</code>, <code>warn</code> and <code>error</code>.
+          </p>
+          <p class="note">
+            <code>wall_ms</code> is measured inside the sandbox. Workers freezes its clock during a
+            request, so it reads 0 for a pure CPU call. Time the request from your client, or read
+            the platform's per-event timing in <code>wrangler tail</code>.
           </p>
 
           <h2 id="errors">Errors</h2>

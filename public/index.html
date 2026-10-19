@@ -109,7 +109,7 @@
             <div class="pane">
               <div class="pane-head">
                 <span>response</span>
-                <span id="timing">wall: n/a</span>
+                <span id="timing">round trip: n/a</span>
               </div>
               <pre class="output" id="output" aria-label="Response" tabindex="0">{
   "ok": true,
@@ -353,24 +353,24 @@ content-type: application/json
               var elapsed = Math.round(performance.now() - started);
               if (result.data && result.data.ok) {
                 render(result.data);
-                timing.textContent = "wall: " + result.data.meta.wall_ms + " ms";
-                setStatus("Done in " + elapsed + " ms.", "ok");
+                timing.textContent = "http 200 · " + elapsed + " ms";
+                setStatus("Done.", "ok");
               } else if (result.status === 429) {
-                timing.textContent = "wall: n/a";
+                timing.textContent = "http 429 · " + elapsed + " ms";
                 render(result.data);
                 setStatus("Rate limited. Wait a moment, then run again.", "busy");
               } else if (result.status === 503) {
-                timing.textContent = "wall: n/a";
+                timing.textContent = "http 503 · " + elapsed + " ms";
                 render(result.data);
                 setStatus("The sandbox is busy. Retry in a second.", "busy");
               } else {
-                timing.textContent = "wall: " + elapsed + " ms";
+                timing.textContent = "http " + result.status + " · " + elapsed + " ms";
                 render(result.data);
                 setStatus((result.data.error && result.data.error.code) || "Request failed.", "err");
               }
             })
             .catch(function () {
-              timing.textContent = "wall: n/a";
+              timing.textContent = "no response";
               setStatus("Network error. Check your connection and run again.", "err");
             })
             .finally(function () {
