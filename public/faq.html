@@ -103,7 +103,7 @@
           <p>
             Any package that esm.sh can resolve and bundle as ESM, subject to the CPU budget. Small
             and medium libraries work: lodash, date-fns, zod, nanoid, small utilities. A full
-            <code>import _ from 'lodash'</code> costs 90 to 170 ms of CPU on this build, because
+            <code>import _ from 'lodash'</code> costs 40 to 190 ms of CPU on this build, because
             QuickJS has to parse the whole 82 KB bundle. Import the submodule instead
             (<code>lodash/chunk</code>) and it is a fraction of that. A full UI framework, a parser
             generator or a crypto suite is likely to exceed the instruction budget and return

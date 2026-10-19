@@ -104,10 +104,10 @@ Measured on 2026-10-19 against the deployed Worker with `wrangler tail --format 
 
 | Scenario | cpuTime | wallTime | Notes |
 | --- | --- | --- | --- |
-| `return 2 + 2` | 2 to 5 ms | 2 to 6 ms | Warm isolate; p50 about 5 ms over 18 calls, p95 about 47 ms. |
+| `return 2 + 2` | 2 to 7 ms | 2 to 10 ms | Warm isolate; p50 about 5 ms over 18 calls, p95 about 47 ms. |
 | regex over a short string | 1 to 3 ms | 2 to 5 ms | |
 | `new Date(...)` | 1 to 3 ms | 2 to 5 ms | |
-| `import _ from 'lodash'` (warm) | 94 to 166 ms | 122 to 220 ms | 82 KB bundle parsed by QuickJS. |
+| `import _ from 'lodash'` (warm) | 38 to 189 ms | 39 to 268 ms | 82 KB bundle parsed by QuickJS; cost depends on isolate warmth. |
 | counter loop, 200k iterations | 49 ms | 51 ms | About 0.25 ms per 1000 iterations. |
 | `while (true) {}` | 184 to 366 ms | 187 to 375 ms | Cut by the instruction budget, returns a clean 408. |
 | 512 MB allocation | 3 to 41 ms | 3 to 42 ms | OOM before the allocation lands. |

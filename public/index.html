@@ -184,7 +184,7 @@
                 </tr>
                 <tr>
                   <td>Full lodash import (warm)</td>
-                  <td class="num" data-m="pkg">90 to 170 ms CPU</td>
+                  <td class="num" data-m="pkg">40 to 190 ms CPU</td>
                   <td>82 KB bundle parsed by QuickJS. Submodule imports cost far less.</td>
                 </tr>
                 <tr>
@@ -212,7 +212,7 @@
           </div>
           <p class="note" style="margin-top: 18px">
             Cloudflare publishes 10 ms of CPU per request on the free plan. Measured on this
-            deployment, a trivial call uses 2 to 6 ms and a full lodash import uses 90 to 170 ms,
+            deployment, a trivial call uses 2 to 7 ms and a full lodash import uses 40 to 190 ms,
             and the platform served both. Do not plan against the higher numbers: keep calls small,
             prefer a submodule import over a whole library, and read the <a href="/faq">FAQ</a>
             before pointing a loop at it.
