@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FAQ · axon</title>
+    <meta
+      name="description"
+      content="Honest answers about the axon sandbox: limits, safety, packages, rate limits, retention and self-hosting."
+    />
+    <link rel="canonical" href="https://axon.va-n.com/faq" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="FAQ · axon" />
+    <meta property="og:description" content="Limits, safety, packages, retention and self-hosting, without the marketing fog." />
+    <meta property="og:url" content="https://axon.va-n.com/faq" />
+    <meta property="og:image" content="https://axon.va-n.com/og.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/site.css" />
+    <script src="/assets/site.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-head">
+      <div class="wrap">
+        <a class="brand" href="/">axon</a>
+        <nav class="nav" aria-label="Main">
+          <a href="/docs">Docs</a>
+          <a href="/faq" aria-current="page">FAQ</a>
+          <a href="/about">About</a>
+          <a href="https://github.com/naas1201/axon" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" style="padding-bottom: 24px">
+        <div class="wrap">
+          <p class="eyebrow">Questions</p>
+          <h1>Answers, not fog.</h1>
+          <p class="lede">
+            If something here is vague, it is a bug in the page. The limits below are the limits the
+            Worker actually enforces.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top: 8px">
+        <div class="wrap prose">
+          <h2>What is a logic coprocessor?</h2>
+          <p>
+            A small, deterministic service that does the part of a task a language model is worst
+            at: exact computation. Your agent sends code, axon runs it, your agent gets a typed JSON
+            value back. It is a coprocessor in the old sense: a second unit that handles one class of
+            instruction so the main unit does not have to.
+          </p>
+
+          <h2>Is my code safe to send?</h2>
+          <p>
+            Your code runs inside QuickJS, a JavaScript engine compiled to WebAssembly, not inside
+            Node and not inside the Worker's own isolate. From inside the sandbox there is no
+            <code>fetch</code>, no filesystem, no <code>process</code>, no <code>require</code>, no
+            environment and no shared memory with another request. Each call gets a new runtime and
+            a new 16 MB heap (configurable up to 32 MB), and every handle is disposed before the
+            response leaves.
+          </p>
+          <p>
+            That protects the platform from your code. It does not make arbitrary code harmless to
+            <em>you</em>: if you paste a secret into the code field, it is in the request. Do not do
+            that. The sandbox has no access to secrets because it has no access to anything.
+          </p>
+
+          <h2>What are the limits?</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Limit</th><th scope="col">Value</th><th scope="col">Notes</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>CPU per request</td><td class="num">10 ms published</td><td>Cloudflare free plan. Measured calls above it were served, but do not rely on that: keep work small.</td></tr>
+                <tr><td>Request body</td><td class="num">64 KB</td><td>Checked on the stream, not only on Content-Length.</td></tr>
+                <tr><td>Code size</td><td class="num">32 KB</td><td>UTF-8 bytes.</td></tr>
+                <tr><td>Deadline</td><td class="num">750 ms</td><td>Upper bound, clamped to 50..1500. In practice the fixed CPU budget stops a runaway loop first.</td></tr>
+                <tr><td>Heap</td><td class="num">16 MB default</td><td>Clamped to 4..32 MB per call.</td></tr>
+                <tr><td>Modules</td><td class="num">10</td><td>Whole graph, 1 MB total, depth 2.</td></tr>
+                <tr><td>Concurrency</td><td class="num">4</td><td>Per isolate, 64 queued, 2 s maximum wait.</td></tr>
+                <tr><td>Rate</td><td class="num">30 / 60 s</td><td>Burst 10, per IP, per colo, best effort.</td></tr>
+                <tr><td>Daily requests</td><td class="num">100,000</td><td>Cloudflare free plan, account wide.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Why the free tier?</h2>
+          <p>
+            Because the useful version of this idea fits in it, and a paid plan would force a
+            different product: queues, durable sessions, long jobs. axon is deliberately the other
+            thing. Ten milliseconds of CPU is a lot of arithmetic and a very small amount of video
+            encoding. If you need the second one, this is the wrong service.
+          </p>
+
+          <h2>Which packages work?</h2>
+          <p>
+            Any package that esm.sh can resolve and bundle as ESM, subject to the CPU budget. Small
+            and medium libraries work: lodash, date-fns, zod, nanoid, small utilities. A full
+            <code>import _ from 'lodash'</code> costs 90 to 170 ms of CPU on this build, because
+            QuickJS has to parse the whole 82 KB bundle. Import the submodule instead
+            (<code>lodash/chunk</code>) and it is a fraction of that. A full UI framework, a parser
+            generator or a crypto suite is likely to exceed the instruction budget and return
+            <code>EXEC_TIMEOUT</code>.
+          </p>
+          <p>
+            The Worker fetches <code>https://esm.sh/&lt;package&gt;?bundle&amp;target=es2022</code>,
+            follows at most two levels of imports, stores the result in the isolate and in the
+            Cloudflare cache, then hands QuickJS a synchronous map of sources. That is why the
+            second call for the same package is much cheaper than the first.
+          </p>
+
+          <h2>What does not work?</h2>
+          <ul>
+            <li>Filesystem, sockets, subprocesses, environment variables.</li>
+            <li>Node builtins, including <code>node:fs</code>, <code>node:http</code> and <code>path</code>.</li>
+            <li>State between calls. There is no storage API inside the sandbox.</li>
+            <li>Top-level await in modules. The runtime is the synchronous QuickJS build.</li>
+            <li>DOM, <code>window</code>, <code>document</code>, browser storage.</li>
+            <li>Heavy compute. See the CPU row above.</li>
+          </ul>
+
+          <h2>Why esm.sh?</h2>
+          <p>
+            It returns one bundled file per package instead of a graph of relative imports, which
+            keeps the number of subrequests low and makes caching effective. It also serves plain
+            ESM, which is what QuickJS wants, without a build step on our side. The origin is fixed
+            and only reachable by the Worker, never by the sandbox.
+          </p>
+
+          <h2>How bad is the cold start?</h2>
+          <p>
+            The wasm module is compiled once per isolate and reused, so the first request in a new
+            isolate pays for instantiation, and later ones do not. On the free plan an idle isolate
+            is evicted, so a quiet endpoint will occasionally look slower. The reply always reports
+            <code>meta.wall_ms</code>, so you can measure it instead of guessing.
+          </p>
+
+          <h2>What about rate limits?</h2>
+          <p>
+            They are per isolate, which in practice means per Cloudflare colo. There is no global
+            counter on the free plan: Queues and Durable Objects are paid products, and using them
+            would break the "free, no account" promise. The practical consequence is that a
+            distributed client can do more than 30 requests per minute in total, and a single client
+            can be limited sooner if it lands in a busy colo. The service answers <code>429</code>
+            with <code>Retry-After</code> rather than dropping requests.
+          </p>
+
+          <h2>Do you keep my code?</h2>
+          <p>
+            No. The Worker does not write request bodies anywhere and does not log them. There is no
+            database, no bucket and no queue in this deployment. Cloudflare's own request logs and
+            error reports exist at the platform level, as they do for any website, but the code you
+            send is not copied into a store by axon.
+          </p>
+
+          <h2>Can I self-host it?</h2>
+          <p>
+            Yes. The repository is MIT licensed, the Worker has no paid bindings, and deployment is
+            three commands. See <a href="/docs#self-host">Self-host</a> in the docs.
+          </p>
+
+          <h2>Is there an SLA?</h2>
+          <p>
+            No. It is a free, best-effort service on a free plan, with no uptime commitment and no
+            support contract. If you need one, self-host or talk to the studio.
+          </p>
+
+          <h2>Who runs this?</h2>
+          <p>
+            LPP Development Studio, the independent studio of Quentin Mouilhaud, in France. See
+            <a href="/about">About</a> and <a href="/license">License</a>.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-foot">
+      <div class="wrap">
+        <div>
+          axon<span class="dot">/</span>Built by LPP Development Studio<span class="dot">/</span>
+          <span data-health>checking API status</span>
+        </div>
+        <nav aria-label="Footer">
+          <a href="https://github.com/naas1201/axon" rel="noopener">GitHub</a>
+          <a href="/license">License</a>
+          <a href="/credits">Credits</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

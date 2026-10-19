@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API reference · axon</title>
+    <meta
+      name="description"
+      content="Endpoint reference, request and response schema, error codes, copy-paste examples and the module loader explained."
+    />
+    <link rel="canonical" href="https://axon.va-n.com/docs" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="API reference · axon" />
+    <meta property="og:description" content="One endpoint, one schema, six copy-paste examples." />
+    <meta property="og:url" content="https://axon.va-n.com/docs" />
+    <meta property="og:image" content="https://axon.va-n.com/og.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/site.css" />
+    <script src="/assets/site.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-head">
+      <div class="wrap">
+        <a class="brand" href="/">axon</a>
+        <nav class="nav" aria-label="Main">
+          <a href="/docs" aria-current="page">Docs</a>
+          <a href="/faq">FAQ</a>
+          <a href="/about">About</a>
+          <a href="https://github.com/naas1201/axon" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" style="padding-bottom: 24px">
+        <div class="wrap">
+          <p class="eyebrow">Reference</p>
+          <h1>One endpoint.</h1>
+          <p class="lede">
+            <code>POST /api/v1/execute</code> takes code, returns a JSON value. Everything else on
+            this page is detail.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top: 8px">
+        <div class="wrap prose">
+          <h2 id="endpoints">Endpoints</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Method</th><th scope="col">Path</th><th scope="col">Purpose</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">POST</td><td><code>/api/v1/execute</code></td><td>Run code, return a result.</td></tr>
+                <tr><td class="num">GET</td><td><code>/api/v1/meta</code></td><td>Limits, engine version, license, sandbox properties.</td></tr>
+                <tr><td class="num">GET</td><td><code>/api/v1/examples</code></td><td>The snippets used by the playground.</td></tr>
+                <tr><td class="num">GET</td><td><code>/health</code></td><td>Liveness. Does not execute anything.</td></tr>
+                <tr><td class="num">OPTIONS</td><td><code>*</code></td><td>CORS preflight, <code>Access-Control-Max-Age: 86400</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2 id="request">Request</h2>
+          <pre><code>{
+  "code": "return 2 + 2",
+  "timeout_ms": 750,
+  "memory_mb": 16
+}</code></pre>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Rules</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>code</code></td><td>string</td><td>required</td><td>1 byte to 32 KB. A script body or an ES module.</td></tr>
+                <tr><td><code>timeout_ms</code></td><td>number</td><td>750</td><td>Clamped to 50..1500. An upper bound: the fixed CPU budget stops a runaway loop first.</td></tr>
+                <tr><td><code>memory_mb</code></td><td>number</td><td>16</td><td>Clamped to 4..32. QuickJS heap.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            A script body is wrapped in a function, so a top level <code>return</code> works. If the
+            code contains <code>import</code> or <code>export</code>, it runs as a module and the
+            value of <code>export default</code> is returned.
+          </p>
+
+          <h2 id="response">Response</h2>
+          <pre><code>{
+  "ok": true,
+  "result": 4,
+  "logs": [],
+  "meta": {
+    "wall_ms": 1.8,
+    "modules": [],
+    "engine": "quickjs 2025-09-13 (bellard)",
+    "timeout_ms": 750,
+    "memory_mb": 16
+  }
+}</code></pre>
+          <p>
+            <code>result</code> is whatever the code returned, serialised with
+            <code>JSON.stringify</code> inside the sandbox. A returned <code>undefined</code> becomes
+            <code>null</code>. Values that cannot be serialised return <code>EXEC_ERROR</code>.
+            Results above 256 KB are refused. <code>logs</code> holds up to 50 captured lines from
+            <code>console.log</code>, <code>info</code>, <code>warn</code> and <code>error</code>.
+          </p>
+
+          <h2 id="errors">Errors</h2>
+          <p>
+            Every error is JSON with <code>ok: false</code>, an <code>error.code</code>, an
+            <code>error.message</code> and a <code>request_id</code>. Stack traces, wasm addresses
+            and environment values are never returned.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Code</th><th scope="col">HTTP</th><th scope="col">Meaning</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>BAD_REQUEST</code></td><td class="num">400</td><td>Body missing, not JSON, not an object, or <code>code</code> is not a string.</td></tr>
+                <tr><td><code>PAYLOAD_TOO_LARGE</code></td><td class="num">413</td><td>Body above 64 KB or code above 32 KB.</td></tr>
+                <tr><td><code>MODULE_NOT_FOUND</code></td><td class="num">422</td><td>Package could not be resolved, or is a Node builtin.</td></tr>
+                <tr><td><code>EXEC_TIMEOUT</code></td><td class="num">408</td><td>CPU budget reached (the sandbox stops at 8 ms), or the deadline passed.</td></tr>
+                <tr><td><code>MEMORY_LIMIT</code></td><td class="num">422</td><td>QuickJS heap ceiling reached.</td></tr>
+                <tr><td><code>EXEC_ERROR</code></td><td class="num">422</td><td>Your code threw, or its result cannot be serialised.</td></tr>
+                <tr><td><code>RATE_LIMITED</code></td><td class="num">429</td><td>Per-IP bucket empty. Honour <code>Retry-After</code>.</td></tr>
+                <tr><td><code>BUSY</code></td><td class="num">503</td><td>4 slots busy and the queue wait expired. Honour <code>Retry-After</code>.</td></tr>
+                <tr><td><code>INTERNAL</code></td><td class="num">500</td><td>Unexpected failure. Treated as a bug, not a normal path.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2 id="examples">Six ways in</h2>
+          <h3>1. curl, arithmetic</h3>
+          <pre><code>curl -s https://axon.va-n.com/api/v1/execute \
+  -H 'content-type: application/json' \
+  -d '{"code":"return Math.round(12000 * Math.pow(1.045, 7) * 100) / 100"}'</code></pre>
+
+          <h3>2. curl, regex</h3>
+          <pre><code>curl -s https://axon.va-n.com/api/v1/execute \
+  -H 'content-type: application/json' \
+  -d '{"code":"const s = \"ABC-142 ABC-157\"; return [...s.matchAll(/[A-Z]{3}-\\\\d+/g)].map(m => m[0])"}'</code></pre>
+
+          <h3>3. JavaScript, fetch</h3>
+          <pre><code>const response = await fetch("https://axon.va-n.com/api/v1/execute", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ code: "return new Date(0).toISOString()" }),
+});
+const data = await response.json();
+console.log(data.result);</code></pre>
+
+          <h3>4. Python, requests</h3>
+          <pre><code>import requests
+
+response = requests.post(
+    "https://axon.va-n.com/api/v1/execute",
+    json={"code": "return [1, 2, 3].reduce((a, b) => a + b, 0)"},
+    timeout=10,
+)
+data = response.json()
+print(data["result"])</code></pre>
+
+          <h3>5. A module, with lodash</h3>
+          <pre><code>{
+  "code": "import _ from 'lodash';\nconst rows = [{team:'core', points:12}, {team:'web', points:7}, {team:'core', points:9}];\nexport default _.chain(rows).groupBy('team').mapValues(g => _.sumBy(g, 'points')).value();",
+  "timeout_ms": 750
+}</code></pre>
+
+          <h3>6. Business days between two dates</h3>
+          <pre><code>const end = new Date("2026-02-01");
+let days = 0;
+for (let d = new Date("2026-01-01"); d &lt; end; d.setDate(d.getDate() + 1)) {
+  const day = d.getUTCDay();
+  if (day !== 0 &amp;&amp; day !== 6) days++;
+}
+return days;</code></pre>
+
+          <h2 id="modules">How the module loader works</h2>
+          <p>
+            The synchronous QuickJS build cannot await a network call from inside the sandbox, so
+            resolution happens first, outside, and evaluation happens second, inside. The sandbox
+            only ever sees a plain <code>Map</code> from module URL to source text.
+          </p>
+          <div class="diagram">
+            <svg viewBox="0 0 760 300" role="img" aria-labelledby="diagram-title diagram-desc">
+              <title id="diagram-title">Module resolution pipeline</title>
+              <desc id="diagram-desc">
+                An agent posts code. The Worker scans import specifiers, fetches bundled packages
+                from esm.sh into a cache and a source map, then starts a fresh QuickJS runtime that
+                loads from the map only.
+              </desc>
+              <g fill="none" stroke="#3a3a40" stroke-width="1">
+                <rect x="12" y="112" width="118" height="62" rx="2" />
+                <rect x="186" y="52" width="170" height="182" rx="2" />
+                <rect x="412" y="52" width="150" height="86" rx="2" />
+                <rect x="412" y="176" width="150" height="58" rx="2" />
+                <rect x="618" y="52" width="130" height="182" rx="2" stroke="#ffb454" />
+              </g>
+              <g fill="#ecebe6" font-family="ui-monospace, Menlo, monospace" font-size="12">
+                <text x="30" y="137">agent</text>
+                <text x="30" y="157" fill="#a6a49d">POST code</text>
+                <text x="204" y="76">cloudflare worker</text>
+                <text x="204" y="96" fill="#a6a49d">router + limits</text>
+                <text x="204" y="116" fill="#a6a49d">import scanner</text>
+                <text x="204" y="136" fill="#a6a49d">esm.sh fetch + cache</text>
+                <text x="204" y="156" fill="#a6a49d">Map&lt;url, source&gt;</text>
+                <text x="204" y="190" fill="#7d7b75">no fs, no net</text>
+                <text x="204" y="210" fill="#7d7b75">no state</text>
+                <text x="430" y="76">esm.sh</text>
+                <text x="430" y="96" fill="#a6a49d">?bundle</text>
+                <text x="430" y="116" fill="#a6a49d">one file per pkg</text>
+                <text x="430" y="198">cf cache</text>
+                <text x="430" y="218" fill="#a6a49d">1 hour</text>
+                <text x="634" y="76" fill="#ffb454">quickjs</text>
+                <text x="634" y="96" fill="#a6a49d">new runtime</text>
+                <text x="634" y="116" fill="#a6a49d">new heap</text>
+                <text x="634" y="136" fill="#a6a49d">sync loader</text>
+                <text x="634" y="156" fill="#a6a49d">deadline</text>
+                <text x="634" y="176" fill="#a6a49d">JSON out</text>
+                <text x="634" y="210" fill="#7d7b75">disposed</text>
+              </g>
+              <g stroke="#ffb454" stroke-width="1" fill="none">
+                <line x1="130" y1="143" x2="186" y2="143" />
+                <line x1="356" y1="143" x2="412" y2="143" />
+                <line x1="562" y1="95" x2="618" y2="125" />
+              </g>
+              <g fill="#ffb454" font-family="ui-monospace, Menlo, monospace" font-size="10">
+                <text x="140" y="136">POST</text>
+                <text x="366" y="136">fetch</text>
+                <text x="566" y="100">load</text>
+              </g>
+            </svg>
+          </div>
+          <p>
+            A module specifier is turned into
+            <code>https://esm.sh/&lt;specifier&gt;?bundle&amp;target=es2022</code>. The Worker follows
+            up to two levels of imports, refuses anything over 10 modules or 1 MB, and rejects Node
+            builtins before fetching. A package that cannot be resolved returns
+            <code>MODULE_NOT_FOUND</code> with the specifier in the message, never a 500.
+          </p>
+
+          <h2 id="self-host">Self-host</h2>
+          <p>
+            Node 20 or newer, a Cloudflare account on the free plan, and a zone you control. No paid
+            bindings are used.
+          </p>
+          <pre><code>git clone https://github.com/naas1201/axon
+cd axon
+npm install
+npx wrangler deploy</code></pre>
+          <p>
+            Edit <code>wrangler.toml</code> to point <code>routes</code> at your own domain, or remove
+            the block to use the <code>*.workers.dev</code> URL. The wasm is bundled at build time and
+            served from the Worker, so there is no runtime download and no extra binding.
+          </p>
+          <p>
+            Run <code>npm test</code> for the lexer and admission-control tests, and
+            <code>node scripts/smoke.mjs https://your-domain</code> for the live scenarios.
+          </p>
+
+          <h2 id="headers">Headers</h2>
+          <ul>
+            <li><code>x-request-id</code> on every response, also present as <code>request_id</code> in error bodies.</li>
+            <li><code>cache-control: no-store</code> on all API responses.</li>
+            <li><code>retry-after</code> on <code>429</code> and <code>503</code>.</li>
+            <li><code>access-control-allow-origin: *</code>, because agents run everywhere.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-foot">
+      <div class="wrap">
+        <div>
+          axon<span class="dot">/</span>Built by LPP Development Studio<span class="dot">/</span>
+          <span data-health>checking API status</span>
+        </div>
+        <nav aria-label="Footer">
+          <a href="https://github.com/naas1201/axon" rel="noopener">GitHub</a>
+          <a href="/license">License</a>
+          <a href="/credits">Credits</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

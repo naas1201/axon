@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="axon, a logic coprocessor for AI agents">
+  <rect width="1200" height="630" fill="#0a0a0b" />
+  <rect x="24" y="24" width="1152" height="582" fill="none" stroke="#26262a" />
+  <rect x="72" y="86" width="16" height="16" fill="#ffb454" />
+  <text x="72" y="180" fill="#ecebe6" font-family="Georgia, 'Times New Roman', serif" font-size="92" letter-spacing="-2">axon</text>
+  <text x="72" y="252" fill="#ffb454" font-family="'SFMono-Regular', Menlo, Consolas, monospace" font-size="19" letter-spacing="3">LOGIC COPROCESSOR API</text>
+  <text x="72" y="356" fill="#ecebe6" font-family="Georgia, 'Times New Roman', serif" font-size="52">Give your agent a place to think.</text>
+  <text x="72" y="420" fill="#a6a49d" font-family="'SFMono-Regular', Menlo, Consolas, monospace" font-size="21">POST JavaScript. Get JSON. No filesystem, no network, no state.</text>
+  <text x="72" y="540" fill="#7d7b75" font-family="'SFMono-Regular', Menlo, Consolas, monospace" font-size="19">axon.va-n.com</text>
+  <line x1="72" y1="500" x2="470" y2="500" stroke="#26262a" />
+</svg>

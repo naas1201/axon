@@ -1,0 +1,16 @@
+/*
+  x-content-type-options: nosniff
+  referrer-policy: no-referrer
+  x-frame-options: DENY
+  permissions-policy: geolocation=(), microphone=(), camera=()
+  content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  cache-control: public, max-age=0, must-revalidate
+
+/assets/*
+  cache-control: public, max-age=3600
+
+/og.svg
+  cache-control: public, max-age=86400
+
+/favicon.svg
+  cache-control: public, max-age=86400

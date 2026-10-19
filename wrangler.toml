@@ -1,0 +1,23 @@
+name = "axon"
+main = "src/index.ts"
+compatibility_date = "2026-10-19"
+workers_dev = true
+
+routes = [
+  { pattern = "axon.va-n.com", custom_domain = true }
+]
+
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = false
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "404-page"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

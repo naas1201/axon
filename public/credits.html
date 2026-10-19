@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Credits · axon</title>
+    <meta
+      name="description"
+      content="The people and projects axon stands on: QuickJS, quickjs-emscripten, esm.sh, Cloudflare Workers and lodash."
+    />
+    <link rel="canonical" href="https://axon.va-n.com/credits" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Credits · axon" />
+    <meta property="og:description" content="Every dependency that matters, with its author and license." />
+    <meta property="og:url" content="https://axon.va-n.com/credits" />
+    <meta property="og:image" content="https://axon.va-n.com/og.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/site.css" />
+    <script src="/assets/site.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-head">
+      <div class="wrap">
+        <a class="brand" href="/">axon</a>
+        <nav class="nav" aria-label="Main">
+          <a href="/docs">Docs</a>
+          <a href="/faq">FAQ</a>
+          <a href="/about">About</a>
+          <a href="https://github.com/naas1201/axon" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" style="padding-bottom: 24px">
+        <div class="wrap">
+          <p class="eyebrow">Credits</p>
+          <h1>Standing on other people's work.</h1>
+          <p class="lede">
+            Each entry below was checked against the package metadata or the repository license, not
+            written from memory.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top: 8px">
+        <div class="wrap prose">
+          <ul class="list-plain">
+            <li>
+              <strong>QuickJS</strong>, the JavaScript engine inside the sandbox. Copyright Fabrice
+              Bellard and Charlie Gordon, MIT. Version 2025-09-13, used through the
+              <code>@jitl/quickjs-wasmfile-release-sync</code> build.
+              <br /><a href="https://github.com/bellard/quickjs" rel="noopener">github.com/bellard/quickjs</a>
+            </li>
+            <li>
+              <strong>quickjs-emscripten</strong>, the WebAssembly bindings and the handle lifetime
+              API that make QuickJS usable from a Worker. Jake Teton-Landis, MIT, version 0.32.0.
+              <br /><a href="https://github.com/justjake/quickjs-emscripten" rel="noopener">github.com/justjake/quickjs-emscripten</a>
+            </li>
+            <li>
+              <strong>esm.sh</strong>, the bundler and CDN that turns an npm package into one ESM
+              file. The esm-dev project, MIT.
+              <br /><a href="https://github.com/esm-dev/esm.sh" rel="noopener">github.com/esm-dev/esm.sh</a>
+            </li>
+            <li>
+              <strong>Cloudflare Workers</strong>, the runtime, the static asset hosting and the
+              cache API. Cloudflare, Inc.
+              <br /><a href="https://developers.cloudflare.com/workers/" rel="noopener">developers.cloudflare.com/workers</a>
+            </li>
+            <li>
+              <strong>lodash</strong>, used in the examples and in the smoke test as a real,
+              non-trivial package. John-David Dalton and contributors, MIT, version 4.18.1.
+              <br /><a href="https://lodash.com/" rel="noopener">lodash.com</a>
+            </li>
+            <li>
+              <strong>Wrangler</strong>, the build and deploy tool. Cloudflare, Inc., MIT and
+              Apache 2.0.
+              <br /><a href="https://github.com/cloudflare/workers-sdk" rel="noopener">github.com/cloudflare/workers-sdk</a>
+            </li>
+          </ul>
+
+          <h2>Things this site does not use</h2>
+          <p>
+            No analytics, no tracking pixels, no external fonts, no JavaScript CDN, no cookie banner.
+            The page loads one stylesheet and one small script from its own origin. There is nothing
+            to consent to.
+          </p>
+
+          <h2>Type</h2>
+          <p>
+            Set in the system serif and system sans stacks, with monospace for code. No webfont is
+            downloaded, which keeps the page fast and the typography honest on every platform.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-foot">
+      <div class="wrap">
+        <div>
+          axon<span class="dot">/</span>Built by LPP Development Studio<span class="dot">/</span>
+          <span data-health>checking API status</span>
+        </div>
+        <nav aria-label="Footer">
+          <a href="https://github.com/naas1201/axon" rel="noopener">GitHub</a>
+          <a href="/license">License</a>
+          <a href="/credits" aria-current="page">Credits</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

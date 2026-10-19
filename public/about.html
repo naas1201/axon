@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About · axon</title>
+    <meta
+      name="description"
+      content="axon is built by LPP Development Studio, the independent studio of Quentin Mouilhaud in France. Why it exists and what it refuses to become."
+    />
+    <link rel="canonical" href="https://axon.va-n.com/about" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="About · axon" />
+    <meta property="og:description" content="An independent studio, one small service, three principles." />
+    <meta property="og:url" content="https://axon.va-n.com/about" />
+    <meta property="og:image" content="https://axon.va-n.com/og.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/site.css" />
+    <script src="/assets/site.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-head">
+      <div class="wrap">
+        <a class="brand" href="/">axon</a>
+        <nav class="nav" aria-label="Main">
+          <a href="/docs">Docs</a>
+          <a href="/faq">FAQ</a>
+          <a href="/about" aria-current="page">About</a>
+          <a href="https://github.com/naas1201/axon" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" style="padding-bottom: 24px">
+        <div class="wrap">
+          <p class="eyebrow">About</p>
+          <h1>A small service<br />on purpose.</h1>
+          <p class="lede">
+            axon is built and operated by LPP Development Studio, the independent studio of Quentin
+            Mouilhaud, in France. It does one thing and refuses to grow into a platform.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top: 8px">
+        <div class="wrap prose">
+          <h2>Why it exists</h2>
+          <p>
+            Agents are good at deciding what to compute and bad at computing it. Ask a model for a
+            compound interest figure and you get a confident number that is sometimes wrong. Ask it
+            for the third Tuesday of next month and you get a paragraph. The usual fix is more tools
+            with more credentials, which turns a small problem into a large attack surface.
+          </p>
+          <p>
+            axon is the smaller fix. One endpoint, no account, no key, no storage. The model writes a
+            few lines of JavaScript, the answer comes back as JSON, and the arithmetic is done by an
+            interpreter instead of a probability distribution.
+          </p>
+
+          <h2>Three principles</h2>
+          <ul class="list-plain">
+            <li>
+              <strong>Stateless.</strong> A new runtime per request. Nothing to leak between callers
+              because nothing is kept. This is also why there is no dashboard: there would be
+              nothing on it.
+            </li>
+            <li>
+              <strong>No retention.</strong> The Worker does not log code, does not write bodies and
+              has no database. The only durable state in the deployment is the package cache at
+              Cloudflare's edge, which holds public library code, not yours.
+            </li>
+            <li>
+              <strong>One job, done well.</strong> Logic, not compute. Ten milliseconds of CPU is a
+              design constraint, not a limitation to apologise for. When a request needs more, the
+              honest answer is a different service.
+            </li>
+          </ul>
+
+          <h2>How it is built</h2>
+          <p>
+            A Cloudflare Worker on the free plan, TypeScript, static assets served from the same
+            deployment, no framework and no build step for the site. The sandbox is QuickJS compiled
+            to WebAssembly, driven by quickjs-emscripten. Packages are resolved through esm.sh before
+            evaluation. There is no queue, no Durable Object and no database, because all three are
+            paid products and none of them are needed for a stateless function.
+          </p>
+          <p>
+            The source is MIT licensed at
+            <a href="https://github.com/naas1201/axon" rel="noopener">github.com/naas1201/axon</a>.
+            If you would rather not depend on someone else's endpoint, deploy your own copy. It
+            takes three commands.
+          </p>
+
+          <h2>The studio</h2>
+          <p>
+            LPP Development Studio builds small, durable software: static sites, internal tools,
+            automation, and the occasional strange utility like this one. Independent, based in
+            France, contactable at
+            <a href="mailto:qmpro@outlook.com">qmpro@outlook.com</a>.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-foot">
+      <div class="wrap">
+        <div>
+          axon<span class="dot">/</span>Built by LPP Development Studio<span class="dot">/</span>
+          <span data-health>checking API status</span>
+        </div>
+        <nav aria-label="Footer">
+          <a href="https://github.com/naas1201/axon" rel="noopener">GitHub</a>
+          <a href="/license">License</a>
+          <a href="/credits">Credits</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>
