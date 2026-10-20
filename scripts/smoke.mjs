@@ -115,7 +115,7 @@ await scenario(
       Array.isArray(r.json.result) &&
       JSON.stringify(r.json.result) === '[[1,2],[3,4],[5]]' &&
       r.json.meta.modules.length > 0,
-    note: `modules=${JSON.stringify(r.json?.meta?.modules)} wall=${r.json?.meta?.wall_ms}`,
+    note: `modules=${JSON.stringify(r.json?.meta?.modules)} engine=${r.json?.meta?.engine}`,
   }),
 );
 
