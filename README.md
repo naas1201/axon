@@ -11,7 +11,7 @@ QuickJS WebAssembly sandbox with no filesystem, no network and no state between 
 curl -s https://axon.va-n.com/api/v1/execute \
   -H 'content-type: application/json' \
   -d '{"code":"return 2 + 2"}'
-# {"ok":true,"result":4,"logs":[],"meta":{"wall_ms":0,"modules":[],...}}
+# {"ok":true,"result":4,"logs":[],"meta":{"modules":[],"engine":"quickjs 2025-09-13 (bellard)",...}}
 ```
 
 ## Why
@@ -45,7 +45,7 @@ compute, and the service says so instead of pretending otherwise.
                                      ┌──────────────────────┐
                                      │  QuickJS (wasm)      │
                                      │  new runtime / call  │
-                                     │  16 MB heap          │
+                                     │  8 MB heap           │
                                      │  wall-clock deadline │
                                      │  sync module loader  │
                                      └──────────────────────┘
@@ -104,33 +104,31 @@ Measured on 2026-10-19 against the deployed Worker with `wrangler tail --format 
 
 | Scenario | cpuTime | wallTime | Notes |
 | --- | --- | --- | --- |
-| `return 2 + 2` | 2 to 7 ms | 2 to 10 ms | Warm isolate; p50 about 5 ms over 18 calls, p95 about 47 ms. |
-| regex over a short string | 1 to 3 ms | 2 to 5 ms | |
-| `new Date(...)` | 1 to 3 ms | 2 to 5 ms | |
-| `import _ from 'lodash'` (warm) | 38 to 189 ms | 39 to 268 ms | 82 KB bundle parsed by QuickJS; cost depends on isolate warmth. |
-| counter loop, 200k iterations | 49 ms | 51 ms | About 0.25 ms per 1000 iterations. |
-| `while (true) {}` | 184 to 366 ms | 187 to 375 ms | Cut by the instruction budget, returns a clean 408. |
-| 512 MB allocation | 3 to 41 ms | 3 to 42 ms | OOM before the allocation lands. |
-| cold isolate, first call | 20 to 47 ms | 21 to 48 ms | wasm instantiation, once per isolate. |
+| `return 6 * 7` | 3 to 9 ms | 3 to 14 ms | Warm isolate; p50 6 ms CPU / 10 ms wall over 15 calls. |
+| `import _ from 'lodash'` (warm) | 44 to 120 ms | 46 to 311 ms | 82 KB bundle parsed by QuickJS; cost depends on isolate warmth. |
+| `import _ from 'lodash'` + `return` | 44 to 120 ms | same | Imports are hoisted and the body wrapped, so no `export default` needed. |
+| `while (true) {}` | 39 to 282 ms | 39 to 283 ms | Cut by the instruction budget, returns a clean 408. |
+| allocation bomb (`new Array(1e6)` in a loop) | 48 to 55 ms | 50 to 56 ms | Trips the 8 MB QuickJS heap, returns a clean 422 MEMORY_LIMIT. |
 
 The published free-plan limit is 10 ms of CPU per request. Calls above it were served during these
 measurements, but that is not a guarantee and not something to design against. Trivial logic sits at
-2 to 5 ms. A whole-library import sits at 90 to 170 ms. If you need the second one on a budget, import
-the submodule (`lodash/chunk`) instead of the package.
+3 to 9 ms. A whole-library import sits at 44 to 120 ms. If you need the second one on a budget, import
+the submodule (`lodash/chunk`, `date-fns/addDays`) instead of the package root: a root barrel can
+expand to hundreds of modules and is refused once the graph passes 10.
 
-`meta.wall_ms` in the API response is a different number: Workers freezes `Date.now()` and
-`performance.now()` for the duration of a request, so it reads 0 for a pure CPU call. The table above
-uses the platform's own per-event timing, which is the honest source.
+The API deliberately reports no server-side duration: Workers freezes `Date.now()` and
+`performance.now()` while a request executes, so such a field would always read 0. The table above uses
+the platform's own per-event timing (`wrangler tail --format json`), which is the honest source.
 
 ## Limits
 
 | Limit | Value |
 | --- | --- |
-| CPU per request | 10 ms (free plan, hard) |
+| CPU per request | 10 ms advertised (free plan), burst tolerated in practice |
 | Request body | 64 KB |
 | Code | 32 KB |
 | Deadline | 50..1500 ms, default 750 |
-| Heap | 4..32 MB, default 16 |
+| Heap | 4..32 MB, default 8 |
 | Module graph | 10 modules, 1 MB, depth 2 |
 | Concurrency | 4 per isolate, 64 queued, 2 s wait |
 | Rate | 30 requests / 60 s, burst 10, per IP per colo |

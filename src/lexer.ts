@@ -14,15 +14,15 @@ export interface ImportScan {
 const MAX_SCAN = 600;
 const MAX_SPECIFIERS = 8;
 
-function isIdentStart(c: string): boolean {
+export function isIdentStart(c: string): boolean {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_' || c === '$';
 }
 
-function isIdentPart(c: string): boolean {
+export function isIdentPart(c: string): boolean {
   return isIdentStart(c) || (c >= '0' && c <= '9');
 }
 
-function skipString(src: string, start: number): number {
+export function skipString(src: string, start: number): number {
   const quote = src[start];
   let i = start + 1;
   while (i < src.length) {
@@ -55,7 +55,7 @@ function skipTrivia(src: string, start: number): number {
   }
 }
 
-function readString(src: string, start: number): { value: string; end: number } | null {
+export function readString(src: string, start: number): { value: string; end: number } | null {
   const quote = src[start];
   if (quote !== '"' && quote !== "'" && quote !== '`') return null;
   let out = '';

@@ -62,7 +62,7 @@
             Node and not inside the Worker's own isolate. From inside the sandbox there is no
             <code>fetch</code>, no filesystem, no <code>process</code>, no <code>require</code>, no
             environment and no shared memory with another request. Each call gets a new runtime and
-            a new 16 MB heap (configurable up to 32 MB), and every handle is disposed before the
+            a new 8 MB heap (configurable up to 32 MB), and every handle is disposed before the
             response leaves.
           </p>
           <p>
@@ -82,7 +82,7 @@
                 <tr><td>Request body</td><td class="num">64 KB</td><td>Checked on the stream, not only on Content-Length.</td></tr>
                 <tr><td>Code size</td><td class="num">32 KB</td><td>UTF-8 bytes.</td></tr>
                 <tr><td>Deadline</td><td class="num">750 ms</td><td>Upper bound, clamped to 50..1500. In practice the fixed CPU budget stops a runaway loop first.</td></tr>
-                <tr><td>Heap</td><td class="num">16 MB default</td><td>Clamped to 4..32 MB per call.</td></tr>
+                <tr><td>Heap</td><td class="num">8 MB default</td><td>Clamped to 4..32 MB per call. A deliberate allocation bomb returns MEMORY_LIMIT, not a platform kill.</td></tr>
                 <tr><td>Modules</td><td class="num">10</td><td>Whole graph, 1 MB total, depth 2.</td></tr>
                 <tr><td>Concurrency</td><td class="num">4</td><td>Per isolate, 64 queued, 2 s maximum wait.</td></tr>
                 <tr><td>Rate</td><td class="num">30 / 60 s</td><td>Burst 10, per IP, per colo, best effort.</td></tr>
@@ -102,11 +102,14 @@
           <h2>Which packages work?</h2>
           <p>
             Any package that esm.sh can resolve and bundle as ESM, subject to the CPU budget. Small
-            and medium libraries work: lodash, date-fns, zod, nanoid, small utilities. A full
-            <code>import _ from 'lodash'</code> costs 40 to 190 ms of CPU on this build, because
-            QuickJS has to parse the whole 82 KB bundle. Import the submodule instead
-            (<code>lodash/chunk</code>) and it is a fraction of that. A full UI framework, a parser
-            generator or a crypto suite is likely to exceed the instruction budget and return
+            and medium libraries work: lodash, zod, nanoid, small utilities, and submodules of large
+            ones such as <code>date-fns/addDays</code>. A full
+            <code>import _ from 'lodash'</code> costs 44 to 120 ms of CPU on this build, because
+            QuickJS has to parse the whole 82 KB bundle. Import a submodule instead
+            (<code>lodash/chunk</code>) and it is a fraction of that. A package whose root is a
+            barrel of hundreds of files, such as <code>date-fns</code> itself, is refused with
+            <code>MODULE_NOT_FOUND</code> once the graph passes 10 modules. A full UI framework, a
+            parser generator or a crypto suite is likely to exceed the instruction budget and return
             <code>EXEC_TIMEOUT</code>.
           </p>
           <p>
@@ -138,8 +141,11 @@
           <p>
             The wasm module is compiled once per isolate and reused, so the first request in a new
             isolate pays for instantiation, and later ones do not. On the free plan an idle isolate
-            is evicted, so a quiet endpoint will occasionally look slower. The reply always reports
-            <code>meta.wall_ms</code>, so you can measure it instead of guessing.
+            is evicted, so a quiet endpoint will occasionally look slower. Measured warm, a trivial
+            call is 3 to 9 ms of CPU and 10 ms at the median wall time; a cold isolate is the
+            difference you see. Time it from your client, or read <code>cpuTime</code> in
+            <code>wrangler tail</code>: Workers freezes the clock inside a request, so a server side
+            duration field would always read zero.
           </p>
 
           <h2>What about rate limits?</h2>

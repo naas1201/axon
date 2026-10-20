@@ -68,7 +68,6 @@ export interface ExecuteOptions {
 export interface ExecuteResult {
   result: unknown;
   logs: string[];
-  wallMs: number;
 }
 
 // The wasm module is compiled once per isolate at startup, never per request.
@@ -214,7 +213,9 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
     // Attach the log ring buffer and drop host-ish globals before user code.
     disposeResult(context.evalCode(PRELUDE, 'axon:prelude.js'));
 
-    const source = options.isModule ? options.code : `(function () {\n${options.code}\n})()`;
+    // src/transform.ts has already applied the script wrapper (or the module
+    // rewrite), so the sandbox evaluates exactly what it is given.
+    const source = options.code;
     const filename = options.isModule ? 'axon:user.mjs' : 'axon:user.js';
 
     let evaluated: VmCallResult<QuickJSHandle>;
@@ -332,11 +333,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
       }
     }
 
-    // Workers freezes Date.now() and performance.now() for the duration of a
-    // request (they only advance at I/O boundaries), so this reads 0 for a
-    // pure CPU call. It is still reported for clients that want it, and the
-    // client-side elapsed time is the honest number. See README, "wall_ms".
-    return { result, logs, wallMs: Math.round((performance.now() - started) * 10) / 10 };
+    return { result, logs };
   } finally {
     // Reverse order: last created handle first, then the context that owns the
     // global object, then the runtime that owns the heap.

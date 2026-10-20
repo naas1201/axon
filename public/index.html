@@ -76,7 +76,7 @@
           <pre><code>curl -s https://axon.va-n.com/api/v1/execute \
   -H 'content-type: application/json' \
   -d '{"code":"return 2 + 2"}'</code></pre>
-          <pre><code>{"ok":true,"result":4,"logs":[],"meta":{"wall_ms":1.8,"modules":[],"engine":"quickjs 2025-09-13"}}</code></pre>
+          <pre><code>{"ok":true,"result":4,"logs":[],"meta":{"modules":[],"engine":"quickjs 2025-09-13 (bellard)"}}</code></pre>
           <p class="note">
             The sandbox is stateless by construction. Every call gets a new QuickJS runtime, a new
             heap and a deadline. Nothing you send is retained, and nothing you send can reach the
@@ -179,43 +179,43 @@
               <tbody>
                 <tr>
                   <td>Arithmetic, strings, regex, dates</td>
-                  <td class="num" data-m="fast">2 to 6 ms CPU</td>
-                  <td>One parse, one evaluation, no I/O.</td>
+                  <td class="num" data-m="fast">3 to 9 ms CPU</td>
+                  <td>One parse, one evaluation, no I/O. p50 is 6 ms.</td>
                 </tr>
                 <tr>
                   <td>Full lodash import (warm)</td>
-                  <td class="num" data-m="pkg">40 to 190 ms CPU</td>
+                  <td class="num" data-m="pkg">44 to 120 ms CPU</td>
                   <td>82 KB bundle parsed by QuickJS. Submodule imports cost far less.</td>
                 </tr>
                 <tr>
                   <td>Median wall time, trivial call</td>
-                  <td class="num" data-m="p50">about 5 ms</td>
+                  <td class="num" data-m="p50">10 ms</td>
                   <td>Server side, measured with wrangler tail.</td>
                 </tr>
                 <tr>
-                  <td>95th percentile wall, trivial call</td>
-                  <td class="num" data-m="p95">about 50 ms</td>
+                  <td>Worst wall time, trivial call</td>
+                  <td class="num" data-m="p95">160 ms</td>
                   <td>Cold isolate, GC, or a first request in a new colo.</td>
                 </tr>
                 <tr>
                   <td>Runaway loop cut off</td>
-                  <td class="num" data-m="timeout">about 250 ms CPU</td>
+                  <td class="num" data-m="timeout">280 ms CPU</td>
                   <td>A fixed instruction budget, not a wall clock.</td>
                 </tr>
                 <tr>
                   <td>Heap ceiling per call</td>
-                  <td class="num">32 MB max</td>
-                  <td>Requested per call, 16 MB default.</td>
+                  <td class="num">8 MB default</td>
+                  <td>Clamped to 4..32 MB with <code>memory_mb</code>.</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p class="note" style="margin-top: 18px">
-            Cloudflare publishes 10 ms of CPU per request on the free plan. Measured on this
-            deployment, a trivial call uses 2 to 7 ms and a full lodash import uses 40 to 190 ms,
-            and the platform served both. Do not plan against the higher numbers: keep calls small,
-            prefer a submodule import over a whole library, and read the <a href="/faq">FAQ</a>
-            before pointing a loop at it.
+            Cloudflare's free plan advertises 10 ms of CPU per request. The platform grants isolates
+            some burst room, and a trivial call measures 3 to 9 ms here. A full lodash import
+            measures 44 to 120 ms and was served, but it sits outside the advertised budget: keep
+            calls small, prefer a submodule (<code>date-fns/addDays</code>, not <code>date-fns</code>),
+            and read the <a href="/faq">FAQ</a> before pointing a loop at it.
           </p>
         </div>
       </section>
@@ -238,7 +238,7 @@
               <ul class="list-plain">
                 <li><strong>Dates and time zones.</strong> Business days, deadlines, offsets, ISO formatting.</li>
                 <li><strong>Unit and currency math.</strong> Rounded once, at the end, in one place.</li>
-                <li><strong>Package calls.</strong> lodash, date-fns, zod and anything else esm.sh can bundle.</li>
+                <li><strong>Package calls.</strong> lodash, zod, <code>date-fns/addDays</code> and anything else esm.sh can bundle into one file.</li>
               </ul>
             </div>
           </div>
@@ -254,7 +254,7 @@
           <pre><code>POST https://axon.va-n.com/api/v1/execute
 content-type: application/json
 
-{ "code": "return 2 + 2", "timeout_ms": 750, "memory_mb": 16 }</code></pre>
+{ "code": "return 2 + 2", "timeout_ms": 750 }</code></pre>
           <p>
             <a class="btn" href="/docs">Full API reference</a>
             <a class="btn btn-ghost" href="https://github.com/naas1201/axon" rel="noopener">Self-host it</a>
@@ -342,7 +342,7 @@ content-type: application/json
           fetch("/api/v1/execute", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ code: code, timeout_ms: 750, memory_mb: 16 }),
+            body: JSON.stringify({ code: code, timeout_ms: 750 }),
           })
             .then(function (response) {
               return response.json().then(function (data) {

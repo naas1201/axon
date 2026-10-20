@@ -6,6 +6,7 @@ import { IpLimiter, Semaphore, hashKey } from './limits';
 import { collectImports } from './lexer';
 import { ModuleError, loadModules } from './modules';
 import { ENGINE, MAX_INTERRUPT_CHECKS, SandboxError, execute } from './sandbox';
+import { prepareSource } from './transform';
 
 export interface Env {
   ASSETS: Fetcher;
@@ -33,7 +34,10 @@ const MAX_TIMEOUT_MS = 1500;
 const DEFAULT_TIMEOUT_MS = 750;
 const MIN_MEMORY_MB = 4;
 const MAX_MEMORY_MB = 32;
-const DEFAULT_MEMORY_MB = 16;
+// 8 MB is enough for a few hundred KB of JSON and a bundled library, and small
+// enough that a runaway allocation trips QuickJS's own ceiling before the
+// isolate's 128 MB limit turns into an uncatchable platform kill.
+const DEFAULT_MEMORY_MB = 8;
 
 const MAX_CONCURRENT = 4;
 const MAX_QUEUE = 64;
@@ -363,9 +367,10 @@ async function handleExecute(
   }
 
   try {
+    const prepared = prepareSource(code, scan.isModule);
     const outcome = await execute({
-      code,
-      isModule: scan.isModule,
+      code: prepared.source,
+      isModule: prepared.isModule,
       timeoutMs,
       memoryMb,
       modules,
@@ -377,7 +382,6 @@ async function handleExecute(
         result: outcome.result === undefined ? null : outcome.result,
         logs: outcome.logs,
         meta: {
-          wall_ms: outcome.wallMs,
           modules: moduleNames,
           engine: ENGINE,
           timeout_ms: timeoutMs,

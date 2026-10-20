@@ -78,14 +78,15 @@
               <tbody>
                 <tr><td><code>code</code></td><td>string</td><td>required</td><td>1 byte to 32 KB. A script body or an ES module.</td></tr>
                 <tr><td><code>timeout_ms</code></td><td>number</td><td>750</td><td>Clamped to 50..1500. An upper bound: the fixed CPU budget stops a runaway loop first.</td></tr>
-                <tr><td><code>memory_mb</code></td><td>number</td><td>16</td><td>Clamped to 4..32. QuickJS heap.</td></tr>
+                <tr><td><code>memory_mb</code></td><td>number</td><td>8</td><td>Clamped to 4..32. QuickJS heap.</td></tr>
               </tbody>
             </table>
           </div>
           <p>
             A script body is wrapped in a function, so a top level <code>return</code> works. If the
-            code contains <code>import</code> or <code>export</code>, it runs as a module and the
-            value of <code>export default</code> is returned.
+            code contains <code>import</code> or <code>export</code>, it runs as a module. Both shapes
+            are valid: <code>export default value</code>, or plain top level <code>return</code> with
+            the imports hoisted above it. Neither needs a wrapper of your own.
           </p>
 
           <h2 id="response">Response</h2>
@@ -94,11 +95,10 @@
   "result": 4,
   "logs": [],
   "meta": {
-    "wall_ms": 0,
     "modules": [],
     "engine": "quickjs 2025-09-13 (bellard)",
     "timeout_ms": 750,
-    "memory_mb": 16
+    "memory_mb": 8
   }
 }</code></pre>
           <p>
@@ -109,9 +109,11 @@
             <code>console.log</code>, <code>info</code>, <code>warn</code> and <code>error</code>.
           </p>
           <p class="note">
-            <code>wall_ms</code> is measured inside the sandbox. Workers freezes its clock during a
-            request, so it reads 0 for a pure CPU call. Time the request from your client, or read
-            the platform's per-event timing in <code>wrangler tail</code>.
+            There is no server side timing field on purpose. Workers freezes its clock while a
+            request is executing, so any in-sandbox duration would read 0. Time the call from your
+            client, or read <code>cpuTime</code> and <code>wallTime</code> per event in
+            <code>wrangler tail --format json</code>. The playground on the home page shows the
+            client measured round trip.
           </p>
 
           <h2 id="errors">Errors</h2>
@@ -129,7 +131,7 @@
                 <tr><td><code>BAD_REQUEST</code></td><td class="num">400</td><td>Body missing, not JSON, not an object, or <code>code</code> is not a string.</td></tr>
                 <tr><td><code>PAYLOAD_TOO_LARGE</code></td><td class="num">413</td><td>Body above 64 KB or code above 32 KB.</td></tr>
                 <tr><td><code>MODULE_NOT_FOUND</code></td><td class="num">422</td><td>Package could not be resolved, or is a Node builtin.</td></tr>
-                <tr><td><code>EXEC_TIMEOUT</code></td><td class="num">408</td><td>CPU budget reached (the sandbox stops at 8 ms), or the deadline passed.</td></tr>
+                <tr><td><code>EXEC_TIMEOUT</code></td><td class="num">408</td><td>Instruction budget reached (about 280 ms of CPU), or the deadline passed.</td></tr>
                 <tr><td><code>MEMORY_LIMIT</code></td><td class="num">422</td><td>QuickJS heap ceiling reached.</td></tr>
                 <tr><td><code>EXEC_ERROR</code></td><td class="num">422</td><td>Your code threw, or its result cannot be serialised.</td></tr>
                 <tr><td><code>RATE_LIMITED</code></td><td class="num">429</td><td>Per-IP bucket empty. Honour <code>Retry-After</code>.</td></tr>
@@ -172,9 +174,16 @@ print(data["result"])</code></pre>
 
           <h3>5. A module, with lodash</h3>
           <pre><code>{
-  "code": "import _ from 'lodash';\nconst rows = [{team:'core', points:12}, {team:'web', points:7}, {team:'core', points:9}];\nexport default _.chain(rows).groupBy('team').mapValues(g => _.sumBy(g, 'points')).value();",
+  "code": "import _ from 'lodash';\nconst rows = [{team:'core', points:12}, {team:'web', points:7}, {team:'core', points:9}];\nreturn _.chain(rows).groupBy('team').mapValues(g => _.sumBy(g, 'points')).value();",
   "timeout_ms": 750
 }</code></pre>
+          <p class="note">
+            Imports are hoisted and the body is wrapped, so a plain top level
+            <code>return</code> next to an <code>import</code> is the shortest form.
+            <code>export default value</code> is accepted too. For large libraries, import the
+            submodule (<code>date-fns/addDays</code>, not the whole <code>date-fns</code> barrel):
+            a root barrel can expand to hundreds of modules, and the resolver stops at 10.
+          </p>
 
           <h3>6. Business days between two dates</h3>
           <pre><code>const end = new Date("2026-02-01");
